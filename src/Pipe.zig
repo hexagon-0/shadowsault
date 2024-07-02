@@ -11,7 +11,6 @@ const Self = @This();
 pub fn init(flipped: bool) Self {
     var sprite = img.pipe.sprite();
     sprite.height = 8;
-    sprite.region = .{ .x = 0, .y = 0, .stride = 8 };
 
     if (flipped) {
         sprite.flags |= w4.BLIT_FLIP_X;

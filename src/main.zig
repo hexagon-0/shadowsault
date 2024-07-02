@@ -42,10 +42,15 @@ const base_spike_spawn_time = 120;
 const variance_spike_spawn_time = 40;
 
 var anim_time: u64 = 0;
+var player_anim_start: u64 = 0;
+var player_anim_hold: bool = false;
+var player_current_anim: []const u16 = undefined;
 
 fn reset() void {
     spike_pool.resize(0) catch unreachable;
-    player = .{ .rect = .{ .x = world_boundary_left, .y = w4.SCREEN_SIZE - 50, .w = 8, .h = 8 } };
+    player = Player.init();
+    player.rect.x = world_boundary_left;
+    player.rect.y = w4.SCREEN_SIZE - 50;
     gravity_dir = .left;
     spike_spawn_timer = 0;
     spike_spawn_dir = .left;
@@ -58,6 +63,9 @@ fn reset() void {
     score_to_draw = std.fmt.bufPrint(&score_text, "{}", .{score}) catch unreachable;
     high_score_to_draw = std.fmt.bufPrint(&high_score_text, "{}", .{high_score}) catch unreachable;
     anim_time = 0;
+    player_anim_start = 0;
+    player_current_anim = &img.player.anim_run;
+    player_anim_hold = false;
 }
 
 export fn start() void {
@@ -81,6 +89,7 @@ export fn update() void {
             if (player.rect.x >= world_boundary_left) {
                 break :blk false;
             }
+            player.sprite.flags &= ~w4.BLIT_FLIP_X;
             player.rect.x = world_boundary_left;
             break :blk true;
         },
@@ -88,12 +97,13 @@ export fn update() void {
             if (player.rect.right() < world_boundary_right) {
                 break :blk false;
             }
+            player.sprite.flags |= w4.BLIT_FLIP_X;
             player.rect.x = @intCast(world_boundary_right - player.rect.w);
             break :blk true;
         },
     };
 
-    if (on_wall and !prev_on_wall) {
+    if (on_wall and !prev_on_wall) { // Land
         score += 1;
         score_to_draw = std.fmt.bufPrint(&score_text, "{}", .{score}) catch unreachable;
 
@@ -101,6 +111,10 @@ export fn update() void {
             high_score = score;
             high_score_to_draw = std.fmt.bufPrint(&high_score_text, "{}", .{high_score}) catch unreachable;
         }
+
+        player_anim_start = anim_time;
+        player_current_anim = &img.player.anim_run;
+        player_anim_hold = false;
     }
 
     prev_on_wall = on_wall;
@@ -112,12 +126,15 @@ export fn update() void {
     prev_gamepad = gamepad;
 
     if (jump_just_pressed) {
-        jump_buffer = 10;
+        jump_buffer = 8;
     }
 
-    if (on_wall and jump_buffer > 0) {
-        gravity_dir = gravity_dir.flipped();
+    if (on_wall and jump_buffer > 0) { // Jump
+        gravity_dir.flip();
         jump_buffer = 0;
+        player_anim_start = anim_time;
+        player_current_anim = &img.player.anim_flip;
+        player_anim_hold = true;
     } else {
         jump_buffer -|= 1;
     }
@@ -197,6 +214,11 @@ export fn update() void {
     w4.rect(0, 0, 38, 160);
     w4.rect(160 - 38, 0, 38, 160);
 
+    var player_anim_frame: usize = @intCast((anim_time - player_anim_start) / 6);
+    if (player_anim_frame >= player_current_anim.len) {
+        player_anim_frame = if (player_anim_hold) player_current_anim.len - 1 else player_anim_frame % player_current_anim.len;
+    }
+    player.sprite.frame = player_current_anim[player_anim_frame];
     player.draw();
 
     w4.DRAW_COLORS.* = 0x20;
