@@ -87,6 +87,7 @@ export fn start() void {
 
     global_time = 0;
     rng = std.Random.DefaultPrng.init(0);
+    load_high_score();
     game_state = .title_screen;
     reset();
 }
@@ -365,11 +366,22 @@ fn start_gameplay() void {
 }
 
 fn game_over() void {
+    save_high_score();
     game_state = .game_over_intro;
     w4.tone(220 | (170 << 16), 30 | (80 << 8), (40 << 8) | 40, w4.TONE_PULSE1 | w4.TONE_MODE2);
 }
 
+fn load_high_score() void {
+    _ = w4.diskr(@as([*]u8, @ptrCast(&high_score)), @sizeOf(@TypeOf(high_score)));
+    high_score_to_draw = std.fmt.bufPrint(&high_score_text, "{}", .{high_score}) catch &high_score_text;
+}
+
+fn save_high_score() void {
+    _ = w4.diskw(@as([*]u8, @ptrCast(&high_score)), @sizeOf(@TypeOf(high_score)));
+}
+
 fn erase_high_score() void {
     high_score = 0;
+    save_high_score();
     high_score_to_draw = std.fmt.bufPrint(&high_score_text, "{}", .{high_score}) catch &high_score_text;
 }
