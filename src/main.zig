@@ -102,6 +102,7 @@ export fn update() void {
     switch (game_state) {
         .title_screen => {
             if (just_pressed & w4.BUTTON_2 != 0) {
+                w4.tone(650, 20 << 8, (20 << 8) | 20, w4.TONE_PULSE1);
                 start_gameplay();
             }
 
@@ -110,6 +111,7 @@ export fn update() void {
                 flicker_del_text = true;
 
                 if (high_score_erase_timer <= 0) {
+                    w4.tone(40, 20 | (70 << 8), (40 << 8) | 40, w4.TONE_PULSE1);
                     erase_high_score();
                     high_score_erase_timer = high_score_time_to_erase;
                 }
@@ -308,13 +310,14 @@ export fn update() void {
 
     {
         w4.DRAW_COLORS.* = 0x21;
-        w4.text("SCOR", world_boundary_right + 2, 2);
-        w4.text(score_to_draw, world_boundary_right + 2, 12);
-        w4.text("HI", world_boundary_right + 2, 26);
-        w4.text(high_score_to_draw, world_boundary_right + 2, 36);
+        w4.text("HIGH", world_boundary_right + 2, 2);
+        w4.text(high_score_to_draw, world_boundary_right + 2, 12);
     }
 
-    {
+    if (game_state != .title_screen) {
+        w4.text("SCOR", world_boundary_right + 2, 26);
+        w4.text(score_to_draw, world_boundary_right + 2, 36);
+
         const text_x = 6;
         const text_y = 6;
         w4.DRAW_COLORS.* = 0x1;
